@@ -1,0 +1,15 @@
+# Données volumineuses (régénérables via pipeline/download_data.py)
+data/dataco/*.csv
+data/dataco/_raw_latin1.csv
+# On garde le petit dictionnaire de colonnes source
+!data/dataco/DescriptionDataCoSupplyChain.csv
+
+# Artefacts générés
+warehouse.duckdb
+governance/quality_report.json
+__pycache__/
+*.pyc
+
+# Captures temporaires (les versions « propres » sont dans assets/)
+_shot_*.png
+_raw_latin1.csv

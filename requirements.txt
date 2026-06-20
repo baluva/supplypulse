@@ -1,0 +1,6 @@
+# SupplyPulse — dépendances
+duckdb>=1.5,<2
+pandas>=2.0,<3
+streamlit>=1.40
+plotly>=6.0
+PyYAML>=6.0

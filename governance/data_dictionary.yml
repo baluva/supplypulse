@@ -1,0 +1,107 @@
+# =============================================================================
+# SupplyPulse — Dictionnaire de donnees & contrats qualite
+# -----------------------------------------------------------------------------
+# Source : DataCo Smart Supply Chain (180 519 lignes reelles, 2015-2018).
+# Ce fichier documente le modele servi (fct_sales) ET declare les tests qualite
+# rejoues automatiquement par governance/quality_checks.py (exploitable en CI).
+#
+# Tests supportes :
+#   not_null | unique | positive | accepted_values | accepted_range | relationships
+# =============================================================================
+
+version: 2
+domain: Supply Chain & Sales Analytics
+source: DataCo Smart Supply Chain (Mendeley / Kaggle)
+owner: Supply Analytics Team
+
+tables:
+  - name: dataco_raw
+    description: Donnees sources brutes telechargees (53 colonnes denormalisees).
+    grain: 1 ligne par ligne de commande
+    columns: []
+
+  - name: fct_sales
+    description: >
+      Table de faits conforme au grain ligne de commande, issue du staging :
+      colonnes typees/renommees, dates parsees, flags logistiques derives.
+      Base de tous les KPIs supply chain et finance du dashboard.
+    grain: 1 ligne par ligne de commande (order_id x order_item_id)
+    columns:
+      - name: order_item_id
+        type: BIGINT
+        description: Identifiant unique de la ligne de commande.
+        tests: [not_null, unique]
+      - name: order_id
+        type: BIGINT
+        description: Identifiant de la commande (peut couvrir plusieurs lignes).
+        tests: [not_null]
+      - name: order_ts
+        type: TIMESTAMP
+        description: Horodatage de la commande (parse depuis le format M/D/YYYY HH:MM).
+        tests: [not_null]
+      - name: delivery_status
+        type: VARCHAR
+        description: Statut de livraison de la commande.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [Late delivery, Advance shipping, Shipping on time, Shipping canceled]
+      - name: shipping_mode
+        type: VARCHAR
+        description: Mode d'expedition choisi.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [Standard Class, First Class, Second Class, Same Day]
+      - name: market
+        type: VARCHAR
+        description: Marche mondial de la commande.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [Europe, LATAM, Pacific Asia, USCA, Africa]
+      - name: customer_segment
+        type: VARCHAR
+        description: Segment client.
+        tests:
+          - not_null
+          - accepted_values:
+              values: [Consumer, Corporate, Home Office]
+      - name: late_risk
+        type: INTEGER
+        description: Indicateur binaire de risque de retard (0/1).
+        tests:
+          - not_null
+          - accepted_range:
+              min: 0
+              max: 1
+      - name: days_real
+        type: INTEGER
+        description: Delai d'expedition reel (jours).
+        tests:
+          - not_null
+          - accepted_range:
+              min: 0
+              max: 30
+      - name: sales
+        type: DOUBLE
+        description: Montant des ventes de la ligne (USD).
+        tests: [not_null, positive]
+      - name: quantity
+        type: INTEGER
+        description: Quantite commandee.
+        tests: [not_null, positive]
+      - name: profit
+        type: DOUBLE
+        description: Profit de la commande (USD, peut etre negatif = vente a perte).
+        tests: [not_null]
+      - name: profit_ratio
+        type: DOUBLE
+        description: >
+          Ratio de marge de la ligne. Controle metier : doit rester dans
+          [-1, 1] ; au-dela, la ligne est a investiguer (remise > cout).
+        tests:
+          - not_null
+          - accepted_range:
+              min: -1
+              max: 1
