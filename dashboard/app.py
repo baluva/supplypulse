@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 
 import duckdb
 import pandas as pd
@@ -101,6 +103,23 @@ st.markdown(
 
 
 # --------------------------------------------------------------------------- #
+# Bootstrap : construit l'entrepot au 1er lancement (deploiement Streamlit Cloud)
+# --------------------------------------------------------------------------- #
+@st.cache_resource(show_spinner="Initialisation : téléchargement des données réelles + build de l'entrepôt…")
+def ensure_warehouse():
+    """Si l'entrepot DuckDB est absent, joue le pipeline complet (idempotent)."""
+    if os.path.exists(DB_PATH):
+        return True
+    csv = os.path.join(ROOT, "data", "dataco", "dataco_supply_chain.csv")
+    if not os.path.exists(csv):
+        subprocess.run([sys.executable, os.path.join(ROOT, "pipeline", "download_data.py")], check=True)
+    subprocess.run([sys.executable, os.path.join(ROOT, "pipeline", "build_warehouse.py")], check=True)
+    # Les tests qualite sortent en code 1 si echec : c'est normal, on ne bloque pas l'app.
+    subprocess.run([sys.executable, os.path.join(ROOT, "governance", "quality_checks.py")], check=False)
+    return True
+
+
+# --------------------------------------------------------------------------- #
 # Chargement (cache)
 # --------------------------------------------------------------------------- #
 @st.cache_data(show_spinner=False)
@@ -187,6 +206,7 @@ def late_rate(df):
 # --------------------------------------------------------------------------- #
 # App
 # --------------------------------------------------------------------------- #
+ensure_warehouse()
 fact = load_fact()
 if fact is None:
     st.error("Entrepot introuvable. Lance d'abord :\n\n```\n"
